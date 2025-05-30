@@ -1,0 +1,92 @@
+version: '3.8'
+services:
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: mmorpg_db
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: password123
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./services/database/migrations.sql:/docker-entrypoint-initdb.d/init.sql
+      - postgres_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  gateway:
+    build: .
+    command: node services/gateway/index.js
+    ports:
+      - "3000:3000"
+    environment:
+      - DATABASE_URL=postgresql://admin:password123@postgres:5432/mmorpg_db
+      - REDIS_URL=redis://redis:6379
+      - JWT_SECRET=mmorpg_secret_key_2024
+    depends_on:
+      - postgres
+      - redis
+
+  auth:
+    build: .
+    command: node services/auth/index.js
+    ports:
+      - "3001:3001"
+    environment:
+      - DATABASE_URL=postgresql://admin:password123@postgres:5432/mmorpg_db
+      - JWT_SECRET=mmorpg_secret_key_2024
+    depends_on:
+      - postgres
+
+  world:
+    build: .
+    command: node services/world/index.js
+    ports:
+      - "3002:3002"
+    environment:
+      - DATABASE_URL=postgresql://admin:password123@postgres:5432/mmorpg_db
+    depends_on:
+      - postgres
+
+  combat:
+    build: .
+    command: node services/combat/index.js
+    ports:
+      - "3003:3003"
+    environment:
+      - DATABASE_URL=postgresql://admin:password123@postgres:5432/mmorpg_db
+    depends_on:
+      - postgres
+
+  resources:
+    build: .
+    command: node services/resources/index.js
+    ports:
+      - "3004:3004"
+    environment:
+      - DATABASE_URL=postgresql://admin:password123@postgres:5432/mmorpg_db
+    depends_on:
+      - postgres
+
+  craft:
+    build: .
+    command: node services/craft/index.js
+    ports:
+      - "3005:3005"
+    environment:
+      - DATABASE_URL=postgresql://admin:password123@postgres:5432/mmorpg_db
+    depends_on:
+      - postgres
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "8080:80"
+    volumes:
+      - ./client:/usr/share/nginx/html:ro
+
+volumes:
+  postgres_data:
